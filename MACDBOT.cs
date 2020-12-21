@@ -70,7 +70,7 @@ namespace cAlgo.Robots
         private void processSymbol(string symbolName)
         {
             Print("Processing symbol: {0}", symbolName);
-            var symbolSeries = MarketData.GetBars(TimeFrame.Hour, symbolName).OpenPrices;
+            var symbolSeries = MarketData.GetBars(TimeFrame.Hour, symbolName).ClosePrices;
 
 
             var signals = Indicators.MacdCrossOver(symbolSeries, 26, 12, 9).Signal;
@@ -110,7 +110,7 @@ namespace cAlgo.Robots
         private string checkForPullBack(Position pos)
         {
             Print("Checking pull back for symbol: {0}", pos.SymbolName);
-            var symbolSeries = MarketData.GetBars(TimeFrame.Hour, pos.SymbolName).OpenPrices;
+            var symbolSeries = MarketData.GetBars(TimeFrame.Hour, pos.SymbolName).ClosePrices;
 
 
             var signals = Indicators.MacdCrossOver(symbolSeries, 26, 12, 9).Signal;
