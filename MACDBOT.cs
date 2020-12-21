@@ -16,15 +16,11 @@ namespace cAlgo.Robots
     [Robot(TimeZone = TimeZones.UTC, AccessRights = AccessRights.FullAccess)]
     public class MACDBOT : Robot
     {
-        [Parameter(DefaultValue = 0.0)]
-        public double Parameter { get; set; }
-
         string message = "";
-        int count = 0;
 
         protected override void OnStart()
         {
-            Timer.Start(30);
+            Timer.Start(120);
 
             OnTimedEvent();
 
@@ -38,26 +34,35 @@ namespace cAlgo.Robots
         private void OnTimedEvent()
         {
 
-            Print("Running timer. Count is {0} and message is {1}", count, message);
-            count++;
+            int minute = Server.Time.Minute;
+            Print("Server.Time.Date.Minute {0}", minute);
 
-            if (count % 10 == 1)
+
+            if (minute <= 0 || minute > 6)
             {
-                foreach (var symboName in Symbols)
+                return;
+            }
+
+            foreach (var p in Positions)
+            {
+                var warn = checkForPullBack(p);
+                if (warn != null)
                 {
-                    processSymbol(symboName);
+                    sendMessageToTelegram(warn);
                 }
+            }
+
+
+            foreach (var symboName in Symbols)
+            {
+                processSymbol(symboName);
             }
 
             if (!string.IsNullOrEmpty(message))
             {
                 var result = sendMessageToTelegram(message);
-                if (result)
-                {
-                    message = "";
-                }
+                message = "";
             }
-
 
         }
 
@@ -100,6 +105,30 @@ namespace cAlgo.Robots
             {
                 message += symbolName + " : " + "BUY" + "\n\n";
             }
+        }
+
+        private string checkForPullBack(Position pos)
+        {
+            Print("Checking pull back for symbol: {0}", pos.SymbolName);
+            var symbolSeries = MarketData.GetBars(TimeFrame.Hour, pos.SymbolName).ClosePrices;
+
+
+            var signals = Indicators.MacdCrossOver(symbolSeries, 26, 12, 9).Signal;
+            var macd = Indicators.MacdCrossOver(symbolSeries, 26, 12, 9).MACD;
+
+            var macdHasCrossedAboveSignal = macd.HasCrossedAbove(signals, 0);
+            var macdHasCrossedBelowSignal = macd.HasCrossedBelow(signals, 0);
+
+            if (pos.TradeType == TradeType.Buy && macdHasCrossedBelowSignal)
+            {
+                return "WARNING!!";
+            }
+            if (pos.TradeType == TradeType.Sell && macdHasCrossedAboveSignal)
+            {
+                return "WARNING!!";
+            }
+
+            return null;
         }
 
 
